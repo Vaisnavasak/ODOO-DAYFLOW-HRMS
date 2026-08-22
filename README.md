@@ -67,41 +67,6 @@ Other:
 - MySQL Connector/Python
 - Werkzeug
 
-## Project Structure
-
-ODOO/
-│
-├── app.py
-├── setup_db.py
-├── odoodb.sql
-├── requirements.txt
-├── .gitignore
-│
-├── Requirements.md
-├── Objectives.md
-├── Modules.md
-├── List of tables.md
-│
-├── static/
-│   ├── css/
-│   │   └── style.css
-│   ├── js/
-│   │   └── script.js
-│   └── uploads/
-│       ├── logos/
-│       └── profiles/
-│
-└── templates/
-    ├── login.html
-    ├── signup.html
-    ├── hr_dashboard.html
-    ├── employee_dashboard.html
-    ├── employees.html
-    ├── attendance.html
-    ├── leave.html
-    ├── payroll.html
-    └── profile.html
-
 ## Database
 
 MySQL is used as the database for this project.
