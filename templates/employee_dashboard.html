@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dayflow HRMS - Employee Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body data-employee-id="{{ user.employee_id }}">
+
+    <!-- Alerts Container -->
+    <div class="alerts-container" id="alertsContainer"></div>
+
+    <div class="app-container">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                {% if user.company_logo %}
+                <img src="/uploads/logos/{{ user.company_logo }}" alt="Logo">
+                {% else %}
+                <div style="width: 45px; height: 45px; border-radius: 12px; background: linear-gradient(135deg, var(--accent-pink), var(--accent-cyan)); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff;">DF</div>
+                {% endif %}
+                <span class="company-title">{{ user.company_name or 'Dayflow Dashboard' }}</span>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item active" data-tab="profile">
+                    <a href="#profile">
+                        <span class="icon">👤</span>
+                        <span>My Profile</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="attendance">
+                    <a href="#attendance">
+                        <span class="icon">📅</span>
+                        <span>My Attendance</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="leaves">
+                    <a href="#leaves">
+                        <span class="icon">✈️</span>
+                        <span>Leave Requests</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="payroll">
+                    <a href="#payroll">
+                        <span class="icon">💵</span>
+                        <span>My Payroll</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div style="margin-top: auto; padding-top: 1.5rem; border-top: 2px dashed var(--border-light);">
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">LOGGED IN AS:</div>
+                <div style="font-weight: 700; font-size: 0.95rem; color: var(--accent-primary);">{{ user.first_name }}</div>
+                <div style="font-family: monospace; font-size: 0.8rem; color: var(--text-muted);">{{ user.employee_code }}</div>
+                <a href="/logout" class="btn-danger" style="margin-top: 1rem; width: 100%; text-decoration: none; padding: 0.6rem 1rem;">
+                    Sign Out
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard -->
+        <main class="main-wrapper">
+            
+            <!-- Top Header & Systray Check-in -->
+            <header class="systray-header">
+                <div class="systray-left">
+                    <h2 id="pageTitle" style="font-size: 1.5rem; text-shadow: 0 0 10px rgba(255, 0, 127, 0.2);">My Profile</h2>
+                </div>
+                
+                <div class="systray-right">
+                    <!-- Check In/Out Systray -->
+                    <div class="check-in-widget">
+                        <div class="status-dot" id="systrayDot"></div>
+                        <span id="systrayLabel" style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Checked Out</span>
+                        <button class="btn-systray" id="btnCheckIn" onclick="triggerCheckIn()">Check In</button>
+                        <span style="color: var(--border-light);">|</span>
+                        <button class="btn-systray" id="btnCheckOut" onclick="triggerCheckOut()">Check Out</button>
+                    </div>
+
+                    <!-- User Profile Dropdown -->
+                    <div class="user-menu" id="userMenu">
+                        <div class="avatar-wrapper" onclick="toggleDropdown()">
+                            {% if user.profile_picture %}
+                            <img src="/uploads/profiles/{{ user.profile_picture }}" alt="User">
+                            {% else %}
+                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, var(--accent-pink), var(--accent-cyan)); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff;">{{ user.first_name[0] }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="dropdown-menu" id="userDropdown">
+                            <a href="#profile" onclick="document.querySelector('[data-tab=profile]').click()">My Profile</a>
+                            <a href="/logout">Log Out</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Views Wrapper -->
+            <div class="page-content">
+
+                <!-- 1. MY PROFILE TAB -->
+                <div class="tab-content active" id="tab-profile">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; flex-wrap: wrap;">
+                        
+                        <!-- Left Pane: Info Forms -->
+                        <div style="display: flex; flex-direction: column; gap: 2rem;">
+                            <!-- Personal Profile Form -->
+                            <div class="glass-card">
+                                <h3 style="font-size: 1.25rem; color: var(--accent-primary); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">Update Info</h3>
+                                
+                                <form action="/profile/update" method="POST" enctype="multipart/form-data">
+                                    <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px dashed var(--border-light); padding-bottom: 1.5rem;">
+                                        <div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-pink); box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);">
+                                            {% if user.profile_picture %}
+                                            <img src="/uploads/profiles/{{ user.profile_picture }}" style="width:100%; height:100%; object-fit:cover;">
+                                            {% else %}
+                                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, var(--accent-pink), var(--accent-cyan)); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 1.5rem;">{{ user.first_name[0] }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="form-group" style="flex:1; margin-bottom:0;">
+                                            <label for="profile_picture">Change Avatar</label>
+                                            <input type="file" id="profile_picture" name="profile_picture" accept="image/*">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="first_name">First Name</label>
+                                            <input type="text" id="first_name" name="first_name" value="{{ user.first_name }}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="last_name">Last Name</label>
+                                            <input type="text" id="last_name" name="last_name" value="{{ user.last_name or '' }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="phone">Phone Number</label>
+                                            <input type="tel" id="phone" name="phone" value="{{ user.phone or '' }}" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Email ID (Read-Only)</label>
+                                            <input type="email" value="{{ user.email }}" disabled style="background: rgba(255, 255, 255, 0.02); color: var(--text-muted); cursor: not-allowed;">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="address">Postal Address</label>
+                                        <textarea id="address" name="address" rows="3" required>{{ user.address or '' }}</textarea>
+                                    </div>
+
+                                    <button type="submit" class="btn-primary" style="margin-top: 1rem;">Save Profile Settings</button>
+                                </form>
+                            </div>
+
+                            <!-- Change Password Form -->
+                            <div class="glass-card">
+                                <h3 style="font-size: 1.25rem; color: var(--accent-secondary); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">Update Security credentials</h3>
+                                
+                                <form action="/profile/update" method="POST">
+                                    <!-- Keep existing data intact -->
+                                    <input type="hidden" name="phone" value="{{ user.phone or '' }}">
+                                    <input type="hidden" name="address" value="{{ user.address or '' }}">
+
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="password">Current password</label>
+                                            <input type="password" id="password" name="password" placeholder="••••••••" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="new_password">New password</label>
+                                            <input type="password" id="new_password" name="new_password" placeholder="••••••••" required>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn-secondary" style="margin-top: 1rem;">Update Password</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Right Pane: Metadata & Document Uploads -->
+                        <div style="display: flex; flex-direction: column; gap: 2rem;">
+                            <!-- Job Stats -->
+                            <div class="glass-card">
+                                <h4 style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 1rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.25rem;">Employment Profile</h4>
+                                
+                                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                    <div class="payslip-row"><span>Designation:</span><strong>{{ user.designation or 'Associate' }}</strong></div>
+                                    <div class="payslip-row"><span>Department:</span><strong>{{ user.department or 'General' }}</strong></div>
+                                    <div class="payslip-row"><span>Employee Code:</span><strong>{{ user.employee_code }}</strong></div>
+                                    <div class="payslip-row"><span>Joining Date:</span><strong>{{ user.joining_date or 'N/A' }}</strong></div>
+                                </div>
+                            </div>
+
+                            <!-- Uploaded Documents Panel -->
+                            <div class="glass-card">
+                                <h4 style="font-size: 1rem; color: var(--accent-secondary); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.25rem;">Corporate Documents</h4>
+                                
+                                <ul style="list-style:none; display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.5rem;">
+                                    {% for doc in documents %}
+                                    <li style="display:flex; justify-content:space-between; align-items:center; background: rgba(255,255,255,0.02); padding:0.5rem 0.75rem; border-radius:8px; border: 1px solid var(--border-light);">
+                                        <div>
+                                            <div style="font-weight:700; font-size:0.9rem;">{{ doc.document_name }}</div>
+                                            <div style="font-size:0.75rem; color:var(--text-muted);">Format: {{ doc.document_type | upper }}</div>
+                                        </div>
+                                        <a href="/uploads/documents/{{ doc.file_path }}" target="_blank" style="color:var(--accent-cyan); font-weight:700; text-decoration:none; font-size:0.85rem;">View 📂</a>
+                                    </li>
+                                    {% else %}
+                                    <li style="color:var(--text-muted); font-size:0.9rem; text-align:center;">No documents uploaded yet.</li>
+                                    {% endfor %}
+                                </ul>
+
+                                <form action="/documents/upload" method="POST" enctype="multipart/form-data" style="border-top: 1px dashed var(--border-light); padding-top: 1.5rem; display:flex; flex-direction:column; gap:1rem;">
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label for="document_name">Document Name</label>
+                                        <input type="text" id="document_name" name="document_name" placeholder="e.g. Passport, Contract" required>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:0;">
+                                        <label for="document_file">Select File</label>
+                                        <input type="file" id="document_file" name="document_file" required>
+                                    </div>
+                                    <button type="submit" class="btn-secondary" style="width:100%;">Upload Document</button>
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 2. MY ATTENDANCE TAB -->
+                <div class="tab-content" id="tab-attendance">
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="font-size: 1.25rem;">My Attendance Records</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">
+                            Today's Date: <strong style="color: var(--accent-primary);">{{ today_date }}</strong> | Review checks logs and total active timings for this month.
+                        </p>
+                    </div>
+
+                    <!-- Diagnostics Grid -->
+                    <div class="stats-grid">
+                        <div class="glass-card stat-card">
+                            <span class="stat-label">Days Present</span>
+                            <span class="stat-value green">{{ days_present }}</span>
+                        </div>
+                        <div class="glass-card stat-card">
+                            <span class="stat-label">Days Approved Leave</span>
+                            <span class="stat-value cyan">{{ days_leave }}</span>
+                        </div>
+                        <div class="glass-card stat-card">
+                            <span class="stat-label">Total Days Processed</span>
+                            <span class="stat-value pink">{{ total_working }}</span>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Work Hours</th>
+                                    <th>Extra Hours</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in attendances %}
+                                <tr>
+                                    <td><strong>{{ a.attendance_date }}</strong></td>
+                                    <td>{{ a.check_in or '--' }}</td>
+                                    <td>{{ a.check_out or '--' }}</td>
+                                    <td>{{ a.work_hours or '0.00' }} hrs</td>
+                                    <td>
+                                        {% if a.work_hours and a.work_hours > 8.0 %}
+                                        {{ (a.work_hours - 8.0) | round(2) }} hrs
+                                        {% else %}
+                                        0.00 hrs
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if a.status == 'PRESENT' %}
+                                        <span class="badge success">Present</span>
+                                        {% elif a.status == 'HALF_DAY' %}
+                                        <span class="badge warning">Half Day</span>
+                                        {% elif a.status == 'LEAVE' %}
+                                        <span class="badge info">Leave</span>
+                                        {% else %}
+                                        <span class="badge danger">Absent</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" style="text-align:center; color:var(--text-muted);">No attendance entries recorded for this month.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3. LEAVE REQUESTS TAB -->
+                <div class="tab-content" id="tab-leaves">
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; flex-wrap: wrap;">
+                        
+                        <!-- Apply Form -->
+                        <div class="glass-card" style="height: fit-content;">
+                            <h3 style="font-size: 1.25rem; color: var(--accent-secondary); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">Apply for Leave</h3>
+                            
+                            <form action="/leave/apply" method="POST" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                                <div class="form-group">
+                                    <label for="leave_type">Leave Category</label>
+                                    <select id="leave_type" name="leave_type" required>
+                                        <option value="PAID">Paid Leave</option>
+                                        <option value="SICK">Sick Leave</option>
+                                        <option value="UNPAID">Unpaid Leave</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="start_date">Start Date</label>
+                                    <input type="date" id="start_date" name="start_date" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="end_date">End Date</label>
+                                    <input type="date" id="end_date" name="end_date" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="remarks">Remarks / Reason</label>
+                                    <textarea id="remarks" name="remarks" rows="3" placeholder="State reason..." required></textarea>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="attachment">Attach Proof (Optional)</label>
+                                    <input type="file" id="attachment" name="attachment">
+                                </div>
+
+                                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Submit Application</button>
+                            </form>
+                        </div>
+
+                        <!-- Past Leave Requests Table -->
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div class="glass-card">
+                                <h3 style="font-size: 1.25rem; color: var(--accent-primary); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">Request History</h3>
+                                
+                                <div class="table-container" style="margin-top: 0;">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Type</th>
+                                                <th>Dates</th>
+                                                <th>Attachment</th>
+                                                <th>Status</th>
+                                                <th>HR Feedback</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for l in leaves %}
+                                            <tr>
+                                                <td><span class="badge info">{{ l.leave_type }}</span></td>
+                                                <td>
+                                                    <div style="font-weight:600; font-size:0.9rem;">{{ l.start_date }}</div>
+                                                    <div style="font-size:0.75rem; color:var(--text-muted);">to {{ l.end_date }}</div>
+                                                </td>
+                                                <td>
+                                                    {% if l.attachment %}
+                                                    <a href="/uploads/leaves/{{ l.attachment }}" target="_blank" style="color:var(--accent-cyan); font-weight:700; text-decoration:none; font-size:0.85rem;">Download</a>
+                                                    {% else %}
+                                                    --
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if l.status == 'PENDING' %}
+                                                    <span class="badge warning">Pending</span>
+                                                    {% elif l.status == 'APPROVED' %}
+                                                    <span class="badge success">Approved</span>
+                                                    {% else %}
+                                                    <span class="badge danger">Rejected</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span style="font-size:0.85rem; color:var(--text-muted); font-style:italic;">
+                                                        "{{ l.hr_comment or 'No comments' }}"
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            {% else %}
+                                            <tr>
+                                                <td colspan="5" style="text-align:center; color:var(--text-muted);">No leave records found.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 4. MY PAYROLL TAB -->
+                <div class="tab-content" id="tab-payroll">
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; flex-wrap: wrap;">
+                        
+                        <!-- Base salary card -->
+                        <div class="glass-card" style="height: fit-content;">
+                            <h3 style="font-size: 1.25rem; color: var(--accent-secondary); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">Base Salary Structure</h3>
+                            
+                            {% if payroll %}
+                            <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.5rem;">
+                                <div class="payslip-row"><span>Basic Salary (Base):</span><strong>₹{{ "{:,.2f}".format(payroll.basic_salary or 0) }}</strong></div>
+                                <div class="payslip-row"><span>Allowances:</span><strong>₹{{ "{:,.2f}".format(payroll.allowances or 0) }}</strong></div>
+                                <div class="payslip-row"><span>Deductions:</span><strong>₹{{ "{:,.2f}".format(payroll.deductions or 0) }}</strong></div>
+                                <div class="payslip-row total"><span>Net Salary Base:</span><span>₹{{ "{:,.2f}".format(payroll.net_salary or 0) }}</span></div>
+                            </div>
+
+                            <button class="btn-accent" style="width: 100%;" onclick="loadMonthlyPayslip()">View Monthly Payslip</button>
+                            {% else %}
+                            <p style="color:var(--text-muted); font-size:0.95rem;">No salary profile registered yet.</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Notifications box -->
+                        <div class="glass-card">
+                            <h3 style="font-size: 1.25rem; color: var(--accent-primary); margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">System Notifications</h3>
+                            
+                            <ul style="list-style: none; display:flex; flex-direction:column; gap:10px;">
+                                {% for n in notifications %}
+                                <li style="padding: 1rem; border-radius: 10px; background: rgba(255, 255, 255, 0.01); border: 1px solid var(--border-light); border-left: 3px solid var(--accent-cyan);">
+                                    <div style="font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem;">{{ n.message }}</div>
+                                    <div style="font-size: 0.75rem; color:var(--text-muted);">{{ n.created_at }}</div>
+                                </li>
+                                {% else %}
+                                <li style="color:var(--text-muted); font-size:0.9rem; text-align:center; padding: 2rem 0;">No notifications found.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- VIEW PAYSLIP MODAL -->
+    <div class="modal-overlay" id="payslipModal">
+        <div class="modal-container" style="max-width: 750px; background: var(--bg-secondary); border-color: var(--border-color);">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;" class="no-print">
+                <button class="btn-secondary" style="padding: 0.5rem 1rem;" onclick="closeModal('payslipModal')">Close</button>
+                <button class="btn-accent" style="padding: 0.5rem 1rem; margin-left: 0.5rem;" onclick="window.print()">Print Payslip 🖨️</button>
+            </div>
+            
+            <div id="payslipContent">
+                <!-- Dynamically populated via AJAX -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching logic
+        const tabs = document.querySelectorAll('.nav-menu .nav-item');
+        const contents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`tab-${targetTab}`).classList.add('active');
+                
+                // Update page title
+                document.getElementById('pageTitle').innerText = tab.querySelector('span:last-child').innerText;
+                
+                // Update URL parameter
+                history.pushState(null, null, `#${targetTab}`);
+            });
+        });
+
+        // Parse query on load
+        window.addEventListener('load', () => {
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                const activeTab = document.querySelector(`.nav-menu [data-tab="${hash}"]`);
+                if (activeTab) {
+                    activeTab.click();
+                }
+            }
+            updateSystrayStatus();
+        });
+
+        // Modals Management
+        function openModal(id) {
+            document.getElementById(id).classList.add('open');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+
+        // Show toast notifications
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('alertsContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert-item ${type}`;
+            alert.innerHTML = `
+                <span>${message}</span>
+                <span style="cursor:pointer; font-weight: 800; margin-left: 1rem;" onclick="this.parentElement.remove()">&times;</span>
+            `;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 4000);
+        }
+
+        // Systray check-in/out
+        function updateSystrayStatus() {
+            fetch('/api/attendance-status')
+                .then(r => r.json())
+                .then(data => {
+                    const dot = document.getElementById('systrayDot');
+                    const label = document.getElementById('systrayLabel');
+                    if (data.checked_in) {
+                        dot.classList.add('active');
+                        if (data.check_out) {
+                            label.innerText = `Checked Out (${data.check_out})`;
+                            dot.classList.remove('active');
+                        } else {
+                            label.innerText = `Checked In (${data.check_in})`;
+                        }
+                    } else {
+                        dot.classList.remove('active');
+                        label.innerText = 'Checked Out';
+                    }
+                });
+        }
+
+        function triggerCheckIn() {
+            fetch('/api/check-in', { method: 'POST' })
+                .then(r => r.json())
+                .then(res => {
+                    showNotification(res.message, res.success ? 'success' : 'danger');
+                    updateSystrayStatus();
+                });
+        }
+
+        function triggerCheckOut() {
+            fetch('/api/check-out', { method: 'POST' })
+                .then(r => r.json())
+                .then(res => {
+                    showNotification(res.message, res.success ? 'success' : 'danger');
+                    updateSystrayStatus();
+                });
+        }
+
+        // Dropdown
+        function toggleDropdown() {
+            document.getElementById('userDropdown').classList.toggle('show');
+        }
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('#userMenu')) {
+                document.getElementById('userDropdown').classList.remove('show');
+            }
+        });
+
+        // Load dynamic payslip
+        function loadMonthlyPayslip() {
+            const empId = parseInt(document.body.dataset.employeeId);
+            fetch(`/api/payslip/${empId}`)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        const content = document.getElementById('payslipContent');
+                        content.innerHTML = `
+                            <div class="payslip-box">
+                                <div class="payslip-header">
+                                    <div>
+                                        <h3 style="font-size:1.8rem; margin:0; color:var(--accent-pink);">${res.employee_name}</h3>
+                                        <span style="font-family:monospace; color:var(--accent-cyan); font-weight:700;">CODE: ${res.employee_code}</span>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <h4 style="margin:0; font-size:1.2rem; color:#fff;">PAYSLIP STATEMENT</h4>
+                                        <span style="color:var(--text-muted); font-size:0.85rem;">MONTH: ${res.month_name}</span>
+                                    </div>
+                                </div>
+
+                                <div class="payslip-grid">
+                                    <div class="payslip-col">
+                                        <h4 style="font-size:0.9rem; color:var(--accent-cyan); border-bottom:1px solid var(--border-light); padding-bottom:0.25rem;">Corporate Details</h4>
+                                        <div class="payslip-row"><span>Designation:</span><strong>${res.designation || 'Staff'}</strong></div>
+                                        <div class="payslip-row"><span>Department:</span><strong>${res.department || 'General'}</strong></div>
+                                        <div class="payslip-row"><span>Total Business Days:</span><strong>${res.total_working_days}</strong></div>
+                                    </div>
+                                    <div class="payslip-col">
+                                        <h4 style="font-size:0.9rem; color:var(--accent-cyan); border-bottom:1px solid var(--border-light); padding-bottom:0.25rem;">Working Diagnostics</h4>
+                                        <div class="payslip-row"><span>Days Present:</span><strong>${res.payable_days}</strong></div>
+                                        <div class="payslip-row"><span>Unpaid Leave Days:</span><strong>${res.unpaid_days}</strong></div>
+                                        <div class="payslip-row"><span>Days Absent:</span><strong>${res.absent_days}</strong></div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top:2rem;">
+                                    <h4 style="font-size:0.9rem; color:var(--accent-pink); border-bottom:1px solid var(--border-light); padding-bottom:0.25rem; margin-bottom:1rem;">Earnings & Deductions</h4>
+                                    
+                                    <div class="payslip-row">
+                                        <span>Monthly Base Salary:</span>
+                                        <strong>₹${res.basic_salary.toLocaleString()}</strong>
+                                    </div>
+                                    <div class="payslip-row" style="background: rgba(255,255,255,0.02); padding: 0.5rem 0.25rem;">
+                                        <span>Pro-Rated Basic (Payable Days):</span>
+                                        <strong>₹${res.pro_rated_basic.toLocaleString()}</strong>
+                                    </div>
+                                    <div class="payslip-row">
+                                        <span>Allowances:</span>
+                                        <strong>+ ₹${res.allowances.toLocaleString()}</strong>
+                                    </div>
+                                    <div class="payslip-row" style="color: #ff6666;">
+                                        <span>Corporate Deductions:</span>
+                                        <strong>- ₹${res.deductions.toLocaleString()}</strong>
+                                    </div>
+
+                                    <div class="payslip-row total">
+                                        <span>Net Payable Salary:</span>
+                                        <span>₹${res.net_salary.toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        openModal('payslipModal');
+                    } else {
+                        showNotification(res.message, 'danger');
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

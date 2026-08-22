@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dayflow HRMS - Register Organization</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-attachment: fixed; padding: 2rem 0;">
+
+    <div class="auth-split-container" style="width: 1100px; max-width: 95%; min-height: 700px; border-radius: 24px; overflow: hidden; border: 1px solid var(--border-light); box-shadow: var(--card-shadow); background: var(--bg-secondary);">
+        
+        <!-- Left Side: Branding -->
+        <div class="auth-sidebar" style="background: #1e3a8a; color: #ffffff;">
+            <div style="z-index: 2; position: relative;">
+                <h1 style="font-size: 3.5rem; margin-bottom: 1rem; line-height: 1.1; color: #ffffff;">DAYFLOW</h1>
+                <p style="font-size: 1.25rem; font-weight: 600; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2rem;">
+                    Workspace Registration
+                </p>
+                <div style="width: 60px; height: 4px; background: #60a5fa; margin-bottom: 2rem; border-radius: 2px;"></div>
+                <p style="color: #e2e8f0; font-size: 1rem; margin-bottom: 1.5rem; line-height: 1.6;">
+                    Configure your workplace portal or verify your credentials to activate your profile. Track attendance, review leave claims, and view payslips in one single place.
+                </p>
+                <blockquote style="font-size: 1.1rem; font-style: italic; color: #cbd5e1; border-left: 3px solid #60a5fa; padding-left: 1rem; margin-top: 2rem;">
+                    "Every workday, perfectly aligned."
+                </blockquote>
+            </div>
+            
+            <!-- Animated neon orb background elements -->
+            <div style="position: absolute; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%); bottom: -50px; left: -50px; border-radius: 50%;"></div>
+        </div>
+        
+        <!-- Right Side: Signup / Activation Form -->
+        <div class="auth-form-wrapper" style="background: var(--bg-secondary); padding: 3rem; width: 600px; max-height: 90vh; overflow-y: auto; justify-content: flex-start;">
+            
+            <div style="margin-bottom: 1.5rem;">
+                <h2 style="font-size: 2rem; color: var(--text-main); margin-bottom: 0.5rem;" id="formHeading">Get Started</h2>
+                <p style="color: var(--text-muted); font-size: 0.95rem;" id="formSubheading">Choose your account configuration below.</p>
+            </div>
+
+            <!-- Tab Switching Nav -->
+            <div class="tab-navigation" style="margin-bottom: 2rem; display: flex; gap: 1rem;">
+                <button type="button" class="tab-btn active" id="tabHR" onclick="switchSignupType('hr')">Company / HR Setup</button>
+                <button type="button" class="tab-btn" id="tabEmployee" onclick="switchSignupType('employee')">Activate Employee Profile</button>
+            </div>
+
+            {% if error %}
+            <div style="background: rgba(255, 51, 51, 0.12); border: 1px solid var(--accent-red); color: #ff6666; padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; font-weight: 600; font-size: 0.9rem;">
+                ⚠ {{ error }}
+            </div>
+            {% endif %}
+
+            <form action="/signup" method="POST" enctype="multipart/form-data" id="signupForm" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                
+                <input type="hidden" name="signup_type" id="signup_type" value="hr">
+
+                <!-- 1. HR SIGNUP FIELDS -->
+                <div id="hr-fields" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                    <h3 style="font-size: 1rem; color: var(--accent-cyan); border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                        Organization Information
+                    </h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="company_name">Company Name</label>
+                            <input 
+                                type="text" 
+                                id="company_name" 
+                                name="company_name" 
+                                placeholder="e.g. Odoo India" 
+                                data-required="true"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label>Company Logo</label>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.25rem;">
+                                <label for="company_logo" style="cursor: pointer; font-size: 1.5rem; display: inline-flex; align-items: center; justify-content: center; width: 45px; height: 45px; border: 1px dashed var(--border-color); border-radius: 8px; background: var(--bg-primary); transition: all 0.2s ease;" title="Upload Logo">
+                                    🧷
+                                </label>
+                                <input 
+                                    type="file" 
+                                    id="company_logo" 
+                                    name="company_logo" 
+                                    accept="image/*"
+                                    style="display: none;"
+                                >
+                                <span id="logo-file-name" style="font-size: 0.85rem; color: var(--text-light); font-weight: 500;">No file selected</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 1rem; color: var(--accent-pink); border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; margin-top: 1rem; margin-bottom: 0.5rem;">
+                        HR Administrator Details
+                    </h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="first_name">First Name</label>
+                            <input 
+                                type="text" 
+                                id="first_name" 
+                                name="first_name" 
+                                placeholder="e.g. John" 
+                                data-required="true"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="last_name">Last Name</label>
+                            <input 
+                                type="text" 
+                                id="last_name" 
+                                name="last_name" 
+                                placeholder="e.g. Doe" 
+                                data-required="true"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input 
+                                type="tel" 
+                                id="phone" 
+                                name="phone" 
+                                placeholder="+91 XXXXX XXXXX" 
+                                data-required="true"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="joining_date">Date of Joining</label>
+                            <input 
+                                type="date" 
+                                id="joining_date" 
+                                name="joining_date" 
+                                data-required="true"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Admin Email Address</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email" 
+                            placeholder="admin@company.com" 
+                            autocomplete="username"
+                            data-required="true"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Residential/Office Address</label>
+                        <input 
+                            type="text" 
+                            id="address" 
+                            name="address" 
+                            placeholder="e.g. 123 Street Name, City, Country" 
+                            data-required="true"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-row" style="margin-bottom: 0.5rem;">
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                placeholder="••••••••" 
+                                autocomplete="new-password"
+                                data-required="true"
+                                required
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm_password">Confirm Password</label>
+                            <input 
+                                type="password" 
+                                id="confirm_password" 
+                                name="confirm_password" 
+                                placeholder="••••••••" 
+                                autocomplete="new-password"
+                                data-required="true"
+                                required
+                            >
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: -0.5rem; margin-bottom: 0.5rem;">
+                        <input type="checkbox" id="show_hr_password" onchange="toggleHRPassword()" style="width: auto; cursor: pointer;">
+                        <label for="show_hr_password" style="font-size: 0.85rem; color: var(--text-muted); cursor: pointer; margin-bottom: 0; user-select: none;">Show Passwords</label>
+                    </div>
+                </div>
+
+                <!-- 2. EMPLOYEE ACTIVATION FIELDS (HIDDEN BY DEFAULT) -->
+                <div id="employee-fields" style="display: none; flex-direction: column; gap: 1.25rem;">
+                    <h3 style="font-size: 1rem; color: var(--accent-cyan); border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                        Activation Credentials
+                    </h3>
+                    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.5rem;">
+                        Please provide the Corporate ID, Email address, and temporary Password set up by your HR admin to activate your profile.
+                    </p>
+                    <div style="background: rgba(59, 130, 246, 0.08); border-left: 4px solid var(--accent-cyan); padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem; line-height: 1.4;">
+                        ℹ️ <strong>Note:</strong> Independent registration is not available for employees. Your profile must first be onboarded by your HR. Enter your HR-allocated credentials below to activate your account.
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="employee_code">Corporate ID</label>
+                            <input 
+                                type="text" 
+                                id="employee_code" 
+                                name="employee_code" 
+                                placeholder="e.g. OIJODO20260002"
+                                autocomplete="username"
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="emp_email">Email Address</label>
+                            <input 
+                                type="email" 
+                                id="emp_email" 
+                                name="email" 
+                                placeholder="e.g. name@company.com"
+                                autocomplete="email"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emp_address">Residential Address</label>
+                        <input 
+                            type="text" 
+                            id="emp_address" 
+                            name="address" 
+                            placeholder="e.g. 123 Street Name, Area, City"
+                        >
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label for="emp_password">Password (Allocated by HR)</label>
+                        <input 
+                            type="password" 
+                            id="emp_password" 
+                            name="password" 
+                            placeholder="••••••••"
+                            autocomplete="current-password"
+                        >
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                            <input type="checkbox" id="show_emp_password" onchange="toggleEmpPassword()" style="width: auto; cursor: pointer;">
+                            <label for="show_emp_password" style="font-size: 0.85rem; color: var(--text-muted); cursor: pointer; margin-bottom: 0; user-select: none;">Show Password</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" id="submitBtn" style="padding: 1rem; font-size: 1rem; margin-top: 1rem;">
+                    Create Workspace
+                </button>
+            </form>
+
+            <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem;">
+                <span style="color: var(--text-muted);">Already registered?</span>
+                <a href="/" style="color: var(--accent-cyan); font-weight: 700; text-decoration: none; margin-left: 0.5rem; transition: color 0.2s ease;">
+                    Sign In
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toggle Script -->
+    <script>
+        function switchSignupType(type) {
+            const signupTypeInput = document.getElementById('signup_type');
+            signupTypeInput.value = type;
+
+            const tabHR = document.getElementById('tabHR');
+            const tabEmployee = document.getElementById('tabEmployee');
+            const hrFields = document.getElementById('hr-fields');
+            const employeeFields = document.getElementById('employee-fields');
+            const submitBtn = document.getElementById('submitBtn');
+            const formHeading = document.getElementById('formHeading');
+            const formSubheading = document.getElementById('formSubheading');
+
+            if (type === 'employee') {
+                tabHR.classList.remove('active');
+                tabEmployee.classList.add('active');
+                hrFields.style.display = 'none';
+                employeeFields.style.display = 'flex';
+                submitBtn.innerText = "Activate Profile";
+                formHeading.innerText = "Account Activation";
+                formSubheading.innerText = "Verify your HR-allocated details to set up your password.";
+
+                // Remove required and disable HR form fields to prevent duplicate parameter submission
+                document.querySelectorAll('#hr-fields input, #hr-fields select, #hr-fields textarea').forEach(el => {
+                    el.removeAttribute('required');
+                    el.setAttribute('disabled', 'disabled');
+                });
+                
+                // Add required and enable Employee form fields (excluding checkboxes from being required)
+                document.querySelectorAll('#employee-fields input').forEach(el => {
+                    el.removeAttribute('disabled');
+                });
+                document.querySelectorAll('#employee-fields input:not([type="checkbox"])').forEach(el => {
+                    el.setAttribute('required', 'required');
+                });
+            } else {
+                tabEmployee.classList.remove('active');
+                tabHR.classList.add('active');
+                employeeFields.style.display = 'none';
+                hrFields.style.display = 'flex';
+                submitBtn.innerText = "Create Workspace";
+                formHeading.innerText = "Get Started";
+                formSubheading.innerText = "Set up your company workspace and create the primary HR administrator account.";
+
+                // Add required and enable HR form fields
+                document.querySelectorAll('#hr-fields input[data-required], #hr-fields select[data-required], #hr-fields textarea[data-required]').forEach(el => {
+                    el.setAttribute('required', 'required');
+                });
+                document.querySelectorAll('#hr-fields input, #hr-fields select, #hr-fields textarea').forEach(el => {
+                    el.removeAttribute('disabled');
+                });
+                
+                // Remove required and disable Employee form fields
+                document.querySelectorAll('#employee-fields input').forEach(el => {
+                    el.removeAttribute('required');
+                    el.setAttribute('disabled', 'disabled');
+                });
+            }
+        }
+
+        function toggleHRPassword() {
+            const show = document.getElementById('show_hr_password').checked;
+            document.getElementById('password').type = show ? 'text' : 'password';
+            document.getElementById('confirm_password').type = show ? 'text' : 'password';
+        }
+
+        function toggleEmpPassword() {
+            const show = document.getElementById('show_emp_password').checked;
+            document.getElementById('emp_password').type = show ? 'text' : 'password';
+        }
+
+        // Initialize tabs correctly if redirecting with custom states
+        window.addEventListener('load', () => {
+            const params = new URLSearchParams(window.location.search);
+            const signupType = "{{ signup_type }}";
+            if (signupType === 'employee') {
+                switchSignupType('employee');
+            } else {
+                switchSignupType('hr');
+            }
+
+            // Update filename when selecting company logo via paperclip
+            const logoInput = document.getElementById('company_logo');
+            const logoLabel = document.getElementById('logo-file-name');
+            if (logoInput && logoLabel) {
+                logoInput.addEventListener('change', function() {
+                    const filename = this.files.length > 0 ? this.files[0].name : "No file selected";
+                    logoLabel.innerText = filename;
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>

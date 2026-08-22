@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dayflow HRMS - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-attachment: fixed;">
+
+    <div class="auth-split-container" style="width: 1000px; max-width: 95%; min-height: 600px; border-radius: 24px; overflow: hidden; border: 1px solid var(--border-light); box-shadow: var(--card-shadow); background: var(--bg-secondary);">
+        
+        <!-- Left Side: Branding -->
+        <div class="auth-sidebar" style="background: #1e3a8a;">
+            <div style="z-index: 2; position: relative;">
+                <h1 style="font-size: 3.5rem; margin-bottom: 1rem; line-height: 1.1; color: #fff;">DAYFLOW</h1>
+                <p style="font-size: 1.25rem; font-weight: 600; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2rem;">
+                    Human Resource Management
+                </p>
+                <div style="width: 60px; height: 4px; background: #60a5fa; margin-bottom: 2rem; border-radius: 2px;"></div>
+                <blockquote style="font-size: 1.1rem; font-style: italic; color: #e2e8f0; border-left: 3px solid #60a5fa; padding-left: 1rem; margin-top: 2rem;">
+                    "Every workday, perfectly aligned."
+                </blockquote>
+            </div>
+            
+            <!-- Animated neon orb background elements -->
+            <div style="position: absolute; width: 250px; height: 250px; background: radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%); bottom: -50px; right: -50px; border-radius: 50%;"></div>
+        </div>
+        
+        <!-- Right Side: Login Form -->
+        <div class="auth-form-wrapper" style="background: var(--bg-secondary); padding: 3.5rem;">
+            <div style="margin-bottom: 2.5rem;">
+                <h2 style="font-size: 2rem; color: #fff; margin-bottom: 0.5rem;">Sign In</h2>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Enter your email or Corporate ID to access your workplace dashboard.</p>
+            </div>
+
+            {% if success %}
+            <div style="background: rgba(57, 255, 20, 0.12); border: 1px solid var(--accent-green); color: var(--accent-green); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; font-weight: 600; font-size: 0.9rem;">
+                ✔ {{ success }}
+            </div>
+            {% endif %}
+
+            {% if error %}
+            <div style="background: rgba(255, 51, 51, 0.12); border: 1px solid var(--accent-red); color: #ff6666; padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; font-weight: 600; font-size: 0.9rem;">
+                ⚠ {{ error }}
+            </div>
+            {% endif %}
+
+            <form action="/login" method="POST" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div class="form-group">
+                    <label for="email">Email or Employee ID</label>
+                    <input 
+                        type="text" 
+                        id="email" 
+                        name="email" 
+                        placeholder="e.g. name@company.com or OIXX20260001" 
+                        autocomplete="username"
+                        required
+                    >
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <label for="password" style="margin-bottom: 0;">Password</label>
+                    </div>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="••••••••" 
+                        autocomplete="current-password"
+                        required
+                    >
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                        <input type="checkbox" id="show_password" onchange="togglePasswordVisibility()" style="width: auto; cursor: pointer;">
+                        <label for="show_password" style="font-size: 0.85rem; color: var(--text-muted); cursor: pointer; margin-bottom: 0; user-select: none;">Show Password</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" style="padding: 1rem; font-size: 1rem; margin-top: 1rem;">
+                    Sign In
+                </button>
+            </form>
+
+            <div style="margin-top: 2rem; text-align: center; font-size: 0.9rem;">
+                <span style="color: var(--text-muted);">New Organization?</span>
+                <a href="/signup" style="color: var(--accent-cyan); font-weight: 700; text-decoration: none; margin-left: 0.5rem; transition: color 0.2s ease;">
+                    Register Company & HR
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const showPasswordCheckbox = document.getElementById('show_password');
+            passwordInput.type = showPasswordCheckbox.checked ? 'text' : 'password';
+        }
+    </script>
+
+</body>
+</html>

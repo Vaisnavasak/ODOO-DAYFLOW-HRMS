@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dayflow HRMS - HR Portal</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body data-user-employee-id="{{ user.employee_id }}">
+
+    <!-- JSON Structured Data -->
+    <script id="employees-data" type="application/json">
+    {{ employees | tojson | safe }}
+    </script>
+    <script id="payrolls-data" type="application/json">
+    {{ payrolls | tojson | safe }}
+    </script>
+
+    <!-- Alerts Container -->
+    <div class="alerts-container" id="alertsContainer"></div>
+
+    <div class="app-container">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                {% if user.company_logo %}
+                <img src="/uploads/logos/{{ user.company_logo }}" alt="Logo">
+                {% else %}
+                <div style="width: 45px; height: 45px; border-radius: 12px; background: linear-gradient(135deg, var(--accent-pink), var(--accent-cyan)); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff;">DF</div>
+                {% endif %}
+                <span class="company-title">{{ user.company_name or 'Dayflow Dashboard' }}</span>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item active" data-tab="employees">
+                    <a href="#employees">
+                        <span class="icon">👥</span>
+                        <span>Employees</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="attendance">
+                    <a href="#attendance">
+                        <span class="icon">📅</span>
+                        <span>Attendance</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="leaves">
+                    <a href="#leaves">
+                        <span class="icon">✈️</span>
+                        <span>Leave Approvals</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="payroll">
+                    <a href="#payroll">
+                        <span class="icon">💵</span>
+                        <span>Payroll Control</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-tab="reports">
+                    <a href="#reports">
+                        <span class="icon">📈</span>
+                        <span>Reports & Analytics</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div style="margin-top: auto; padding-top: 1.5rem; border-top: 2px dashed var(--border-light);">
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">LOGGED IN AS:</div>
+                <div style="font-weight: 700; font-size: 0.95rem; color: var(--accent-secondary);">{{ user.first_name }} (HR)</div>
+                <a href="/logout" class="btn-danger" style="margin-top: 1rem; width: 100%; text-decoration: none; padding: 0.6rem 1rem;">
+                    Sign Out
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard -->
+        <main class="main-wrapper">
+            
+            <!-- Top Header & Systray Check-in -->
+            <header class="systray-header">
+                <div class="systray-left">
+                    <h2 id="pageTitle" style="font-size: 1.5rem; text-shadow: 0 0 10px rgba(0, 240, 255, 0.2);">Employees</h2>
+                </div>
+                
+                <div class="systray-right">
+                    <!-- Check In/Out Systray -->
+                    <div class="check-in-widget">
+                        <div class="status-dot" id="systrayDot"></div>
+                        <span id="systrayLabel" style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Checked Out</span>
+                        <button class="btn-systray" id="btnCheckIn" onclick="triggerCheckIn()">Check In</button>
+                        <span style="color: var(--border-light);">|</span>
+                        <button class="btn-systray" id="btnCheckOut" onclick="triggerCheckOut()">Check Out</button>
+                    </div>
+
+                    <!-- User Profile Dropdown -->
+                    <div class="user-menu" id="userMenu">
+                        <div class="avatar-wrapper" onclick="toggleDropdown()">
+                            {% if user.profile_picture %}
+                            <img src="/uploads/profiles/{{ user.profile_picture }}" alt="User">
+                            {% else %}
+                            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, var(--accent-pink), var(--accent-cyan)); display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff;">{{ user.first_name[0] }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="dropdown-menu" id="userDropdown">
+                            <a href="#employees" onclick="openHrProfile()">My Profile</a>
+                            <a href="/logout">Log Out</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Views Wrapper -->
+            <div class="page-content">
+
+                <!-- 1. EMPLOYEES TAB -->
+                <div class="tab-content active" id="tab-employees">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <div>
+                            <h3 style="font-size: 1.25rem;">Employee Directory</h3>
+                            <p style="color: var(--text-muted); font-size: 0.9rem;">View, modify, and add employee profiles.</p>
+                        </div>
+                        <button class="btn-primary" onclick="openModal('addEmployeeModal')">+ Register Employee</button>
+                    </div>
+
+                    <!-- Stats Cards Grid -->
+                    <div class="stats-grid">
+                        <div class="glass-card stat-card">
+                            <span class="stat-label">Headcount</span>
+                            <span class="stat-value pink">{{ total_employees }}</span>
+                        </div>
+                        <div class="glass-card stat-card">
+                            <span class="stat-label">Active / Present</span>
+                            <span class="stat-value green">{{ present_count }}</span>
+                        </div>
+                        <div class="glass-card stat-card">
+                            <span class="stat-label">On Approved Leave</span>
+                            <span class="stat-value cyan">{{ leave_count }}</span>
+                        </div>
+                        <div class="glass-card stat-card">
+                            <span class="stat-label">Absent / Off</span>
+                            <span class="stat-value gold">{{ absent_count }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Employee Grid -->
+                    <div class="employee-grid">
+                        {% for emp in employees %}
+                        <div class="glass-card employee-card" onclick="openEmployeeDrawerById({{ emp.employee_id }})">
+                            <div class="status-indicator {{ emp.today_status | lower }}"></div>
+                            
+                            <div class="employee-card-avatar">
+                                {% if emp.profile_picture %}
+                                <img src="/uploads/profiles/{{ emp.profile_picture }}" alt="Profile">
+                                {% else %}
+                                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, var(--bg-tertiary), var(--accent-pink)); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 2rem; color: #fff;">{{ emp.first_name[0] }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="employee-card-name">{{ emp.first_name }} {{ emp.last_name or '' }}</div>
+                            <div class="employee-card-code">{{ emp.employee_code }}</div>
+                            <div class="employee-card-role">{{ emp.designation or 'Associate' }}</div>
+                            <div class="employee-card-role" style="font-size: 0.8rem; margin-top: 0.25rem;">{{ emp.department or 'General' }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- 2. ATTENDANCE TAB -->
+                <div class="tab-content" id="tab-attendance">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <h3 style="font-size: 1.25rem;">Attendance Logs</h3>
+                            <p style="color: var(--text-muted); font-size: 0.9rem;">
+                                Today's Date: <strong style="color: var(--accent-primary);">{{ today_date }}</strong> | Monitor daily check-in patterns and working durations.
+                            </p>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--bg-secondary); padding: 0.5rem; border-radius: 12px; border: 1px solid var(--border-light);">
+                            <button class="btn-secondary" style="padding: 0.5rem 0.75rem;" onclick="adjustSearchDate(-1)">&lt;</button>
+                            <input type="date" id="attendanceFilterDate" value="{{ date_today }}" style="padding: 0.4rem; border: none; width: 140px;" onchange="filterAttendanceByDate()">
+                            <button class="btn-secondary" style="padding: 0.5rem 0.75rem;" onclick="adjustSearchDate(1)">&gt;</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>ID</th>
+                                    <th>Date</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Work Hours</th>
+                                    <th>Extra Hours</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceTableBody">
+                                {% for a in attendances %}
+                                <tr class="attendance-row" data-date="{{ a.attendance_date }}">
+                                    <td>{{ a.first_name }} {{ a.last_name or '' }}</td>
+                                    <td>{{ a.employee_code }}</td>
+                                    <td>{{ a.attendance_date }}</td>
+                                    <td>{{ a.check_in or '--' }}</td>
+                                    <td>{{ a.check_out or '--' }}</td>
+                                    <td>{{ a.work_hours or '0.00' }} hrs</td>
+                                    <td>
+                                        {% if a.work_hours and a.work_hours > 8.0 %}
+                                        {{ (a.work_hours - 8.0) | round(2) }} hrs
+                                        {% else %}
+                                        0.00 hrs
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if a.status == 'PRESENT' %}
+                                        <span class="badge success">Present</span>
+                                        {% elif a.status == 'HALF_DAY' %}
+                                        <span class="badge warning">Half Day</span>
+                                        {% elif a.status == 'LEAVE' %}
+                                        <span class="badge info">On Leave</span>
+                                        {% else %}
+                                        <span class="badge danger">Absent</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3. LEAVE APPROVALS TAB -->
+                <div class="tab-content" id="tab-leaves">
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="font-size: 1.25rem;">Leave Requests</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Review leave applications and approve or reject with comments.</p>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Type</th>
+                                    <th>Duration</th>
+                                    <th>Reason</th>
+                                    <th>Document</th>
+                                    <th>Applied At</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for l in leaves %}
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 700;">{{ l.first_name }} {{ l.last_name or '' }}</div>
+                                        <div style="font-size: 0.8rem; color: var(--accent-primary);">{{ l.employee_code }}</div>
+                                    </td>
+                                    <td><span class="badge info" style="font-weight: 800;">{{ l.leave_type }}</span></td>
+                                    <td>
+                                        <div style="font-size: 0.9rem; font-weight: 600;">{{ l.start_date }}</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-muted);">to {{ l.end_date }}</div>
+                                    </td>
+                                    <td><span style="font-style: italic; color: var(--text-muted);">"{{ l.remarks or 'No details' }}"</span></td>
+                                    <td>
+                                        {% if l.attachment %}
+                                        <a href="/uploads/leaves/{{ l.attachment }}" target="_blank" style="color: var(--accent-primary); font-weight: 700; text-decoration: none;">Download 📂</a>
+                                        {% else %}
+                                        --
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ l.applied_at }}</td>
+                                    <td>
+                                        {% if l.status == 'PENDING' %}
+                                        <span class="badge warning">Pending</span>
+                                        {% elif l.status == 'APPROVED' %}
+                                        <span class="badge success">Approved</span>
+                                        {% else %}
+                                        <span class="badge danger">Rejected</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if l.status == 'PENDING' %}
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button class="btn-accent" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="reviewLeave({{ l.leave_id }}, 'APPROVED')">Approve</button>
+                                            <button class="btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="reviewLeave({{ l.leave_id }}, 'REJECTED')">Reject</button>
+                                        </div>
+                                        {% else %}
+                                        <span style="font-size: 0.85rem; color: var(--text-muted);">Reviewed</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. PAYROLL CONTROL TAB -->
+                <div class="tab-content" id="tab-payroll">
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="font-size: 1.25rem;">Payroll Management</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Review salary slips, update basic structures, and track monthly disbursements.</p>
+                    </div>
+
+                    <div class="glass-card stat-card" style="margin-bottom: 2rem; max-width: 350px;">
+                        <span class="stat-label">Total Monthly Payroll Expense</span>
+                        <span class="stat-value pink" style="font-size: 2.2rem;">₹{{ "{:,.2f}".format(total_payroll_cost) }}</span>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Basic Salary</th>
+                                    <th>Allowances</th>
+                                    <th>Deductions</th>
+                                    <th>Net Salary (Base)</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in payrolls %}
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 700;">{{ p.first_name }} {{ p.last_name or '' }}</div>
+                                        <div style="font-size: 0.8rem; color: var(--accent-primary);">{{ p.employee_code }} ({{ p.department or 'Staff' }})</div>
+                                    </td>
+                                    <td>₹{{ "{:,.2f}".format(p.basic_salary or 0) }}</td>
+                                    <td>₹{{ "{:,.2f}".format(p.allowances or 0) }}</td>
+                                    <td>₹{{ "{:,.2f}".format(p.deductions or 0) }}</td>
+                                    <td style="font-weight: 700; color: var(--accent-green);">₹{{ "{:,.2f}".format(p.net_salary or 0) }}</td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button class="btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="viewPayslip({{ p.employee_id }})">Payslip</button>
+                                            <button class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;" onclick="openEditEmployeeModalById({{ p.employee_id }})">Edit Salary</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 5. REPORTS & ANALYTICS TAB -->
+                <div class="tab-content" id="tab-reports">
+                    <div style="margin-bottom: 2rem;">
+                        <h3 style="font-size: 1.25rem;">Analytics Overview</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Visualization of attendance metrics and department structures.</p>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; flex-wrap: wrap;">
+                        
+                        <!-- Chart 1: Attendance breakdown -->
+                        <div class="glass-card">
+                            <h4 style="font-size: 1rem; color: var(--accent-primary); margin-bottom: 1.5rem;">Today's Attendance Status</h4>
+                            <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1rem;">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.25rem;">
+                                        <span>Present today</span>
+                                        <span>{{ "{:.1f}%".format((present_count / (total_employees or 1)) * 100) }} ({{ present_count }} employees)</span>
+                                    </div>
+                                    <div style="width: 100%; height: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 5px; overflow: hidden;">
+                                        <div style="width: {{ (present_count / (total_employees or 1)) * 100 }}%; height: 100%; background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green);"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.25rem;">
+                                        <span>On Leave today</span>
+                                        <span>{{ "{:.1f}%".format((leave_count / (total_employees or 1)) * 100) }} ({{ leave_count }} employees)</span>
+                                    </div>
+                                    <div style="width: 100%; height: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 5px; overflow: hidden;">
+                                        <div style="width: {{ (leave_count / (total_employees or 1)) * 100 }}%; height: 100%; background: var(--accent-cyan); box-shadow: 0 0 10px var(--accent-cyan);"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.25rem;">
+                                        <span>Absent today</span>
+                                        <span>{{ "{:.1f}%".format((absent_count / (total_employees or 1)) * 100) }} ({{ absent_count }} employees)</span>
+                                    </div>
+                                    <div style="width: 100%; height: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 5px; overflow: hidden;">
+                                        <div style="width: {{ (absent_count / (total_employees or 1)) * 100 }}%; height: 100%; background: var(--accent-gold); box-shadow: 0 0 10px var(--accent-gold);"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chart 2: SVG Headcount breakdown -->
+                        <div class="glass-card">
+                            <h4 style="font-size: 1rem; color: var(--accent-secondary); margin-bottom: 1rem;">Headcount by Department</h4>
+                            <div class="chart-bar-container">
+                                {% set dept_counts = {} %}
+                                {% for emp in employees %}
+                                    {% set dept = emp.department or 'Other' %}
+                                    {% if dept in dept_counts %}
+                                        {% set _ = dept_counts.update({dept: dept_counts[dept] + 1}) %}
+                                    {% else %}
+                                        {% set _ = dept_counts.update({dept: 1}) %}
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% set max_dept_count = 1 %}
+                                {% for dept, count in dept_counts.items() %}
+                                    {% if count > max_dept_count %}
+                                        {% set max_dept_count = count %}
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% for dept, count in dept_counts.items() %}
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                                    <div class="chart-bar" style="height: {{ (count / max_dept_count) * 160 }}px;" data-value="{{ count }}"></div>
+                                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">{{ dept[:6] }}..</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ONBOARD EMPLOYEE MODAL -->
+    <div class="modal-overlay" id="addEmployeeModal">
+        <div class="modal-container">
+            <h3 style="font-size: 1.5rem; color: var(--accent-primary); border-bottom: 2px dashed var(--border-light); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">Register Employee</h3>
+            
+            <form id="addEmployeeForm" onsubmit="submitOnboardEmployee(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">First Name</label>
+                        <input type="text" id="first_name" name="first_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="last_name">Last Name</label>
+                        <input type="text" id="last_name" name="last_name">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="emp_email">Email Address</label>
+                        <input type="email" id="emp_email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="emp_phone">Phone Number</label>
+                        <input type="tel" id="emp_phone" name="phone" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="emp_department">Department</label>
+                        <select id="emp_department" name="department" required>
+                            <option value="Engineering">Engineering</option>
+                            <option value="Design">Design</option>
+                            <option value="HR & Admin">HR & Admin</option>
+                            <option value="Sales & Marketing">Sales & Marketing</option>
+                            <option value="Customer Support">Customer Support</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="emp_designation">Designation</label>
+                        <input type="text" id="emp_designation" name="designation" placeholder="e.g. Frontend Dev" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="emp_joining">Joining Date</label>
+                    <input type="date" id="emp_joining" name="joining_date" required>
+                </div>
+
+                <h4 style="font-size: 0.95rem; color: var(--accent-secondary); border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; margin-top: 1rem; margin-bottom: 0.75rem;">Salary Definition</h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem;">
+                    <div class="form-group">
+                        <label for="basic_salary">Basic Salary</label>
+                        <input type="number" id="basic_salary" name="basic_salary" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="allowances">Allowances</label>
+                        <input type="number" id="allowances" name="allowances" value="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="deductions">Deductions</label>
+                        <input type="number" id="deductions" name="deductions" value="0" required>
+                    </div>
+                </div>
+
+                <!-- Credential Display Area after creation -->
+                <div id="credentialsBox" style="display: none; background: rgba(57, 255, 20, 0.08); border: 2px solid var(--accent-green); border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem; animation: modal-zoom 0.3s ease;">
+                    <h4 style="color: var(--accent-green); font-size: 1.1rem; margin-bottom: 0.5rem;">🎉 Credentials Generated!</h4>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">Copy these temporary details for the employee login.</p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; font-family: monospace; font-size: 0.95rem;">
+                        <div style="color: var(--text-main);">ID: <strong id="generatedCode" style="color: #1e3a8a; font-size: 1.1rem;"></strong></div>
+                        <div style="color: var(--text-main);">Password: <strong id="generatedPassword" style="color: var(--accent-secondary); font-size: 1.1rem;"></strong></div>
+                    </div>
+                    
+                    <button type="button" class="btn-accent" style="margin-top: 1rem; width: 100%; padding: 0.5rem;" onclick="copyCredentials()">Copy Credentials</button>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;" id="modalActionButtons">
+                    <button type="button" class="btn-secondary" onclick="closeModal('addEmployeeModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Confirm Onboarding</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LEAVE REVIEW COMMENTS MODAL -->
+    <div class="modal-overlay" id="leaveReviewModal">
+        <div class="modal-container" style="max-width: 450px;">
+            <h3 style="font-size: 1.25rem; color: var(--accent-secondary); border-bottom: 2px dashed var(--border-light); padding-bottom: 0.5rem; margin-bottom: 1rem;" id="leaveReviewTitle">Review Leave</h3>
+            <form id="leaveReviewForm" onsubmit="submitLeaveReview(event)">
+                <input type="hidden" id="reviewLeaveId" name="leave_id">
+                <input type="hidden" id="reviewLeaveStatus" name="status">
+                
+                <div class="form-group">
+                    <label for="hr_comment">HR Comments / Remarks</label>
+                    <textarea id="hr_comment" name="hr_comment" rows="4" placeholder="Enter review remarks..." required></textarea>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('leaveReviewModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Submit Decision</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- EDIT EMPLOYEE PROFILE & SALARY MODAL -->
+    <div class="modal-overlay" id="editEmployeeModal">
+        <div class="modal-container" style="max-width: 600px;">
+            <h3 style="font-size: 1.5rem; color: var(--accent-primary); border-bottom: 2px dashed var(--border-light); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">Edit Profile & Salary</h3>
+            
+            <form id="editEmployeeForm" onsubmit="submitEditEmployee(event)" enctype="multipart/form-data">
+                <input type="hidden" id="editEmpId" name="employee_id">
+
+                <h4 style="font-size: 0.95rem; color: var(--accent-primary); border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">Personal Details</h4>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editFirstName">First Name</label>
+                        <input type="text" id="editFirstName" name="first_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editLastName">Last Name</label>
+                        <input type="text" id="editLastName" name="last_name">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editPhone">Phone Number</label>
+                        <input type="tel" id="editPhone" name="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Profile Picture</label>
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.25rem;">
+                            <label for="edit_profile_picture" style="cursor: pointer; font-size: 1.25rem; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px dashed var(--border-color); border-radius: 8px; background: var(--bg-primary); transition: all 0.2s ease;" title="Change Photo">
+                                🧷
+                            </label>
+                            <input 
+                                type="file" 
+                                id="edit_profile_picture" 
+                                name="profile_picture" 
+                                accept="image/*"
+                                style="display: none;"
+                            >
+                            <span id="edit-logo-file-name" style="font-size: 0.85rem; color: var(--text-light); font-weight: 500;">No file selected</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="editAddress">Postal Address</label>
+                    <textarea id="editAddress" name="address" rows="2"></textarea>
+                </div>
+
+                <h4 style="font-size: 0.95rem; color: var(--accent-secondary); border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem; margin-top: 1rem; margin-bottom: 0.75rem;">Employment & Salary</h4>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editDepartment">Department</label>
+                        <select id="editDepartment" name="department" required>
+                            <option value="Engineering">Engineering</option>
+                            <option value="Design">Design</option>
+                            <option value="HR & Admin">HR & Admin</option>
+                            <option value="Sales & Marketing">Sales & Marketing</option>
+                            <option value="Customer Support">Customer Support</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDesignation">Designation</label>
+                        <input type="text" id="editDesignation" name="designation" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="editJoining">Joining Date</label>
+                    <input type="date" id="editJoining" name="joining_date" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-top: 1rem;">
+                    <div class="form-group">
+                        <label for="editBasicSalary">Basic Salary</label>
+                        <input type="number" id="editBasicSalary" name="basic_salary" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAllowances">Allowances</label>
+                        <input type="number" id="editAllowances" name="allowances" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDeductions">Deductions</label>
+                        <input type="number" id="editDeductions" name="deductions" required>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('editEmployeeModal')">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- VIEW PAYSLIP MODAL -->
+    <div class="modal-overlay" id="payslipModal">
+        <div class="modal-container" style="max-width: 750px; background: var(--bg-secondary); border-color: var(--border-color);">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;" class="no-print">
+                <button class="btn-secondary" style="padding: 0.5rem 1rem;" onclick="closeModal('payslipModal')">Close</button>
+                <button class="btn-accent" style="padding: 0.5rem 1rem; margin-left: 0.5rem;" onclick="window.print()">Print Payslip 🖨️</button>
+            </div>
+            
+            <div id="payslipContent">
+                <!-- Dynamically populated via AJAX -->
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW EMPLOYEE DETAILS DRAWER -->
+    <div class="drawer" id="viewEmployeeDrawer">
+        <div class="drawer-header">
+            <h3 style="color: var(--accent-secondary); font-size: 1.3rem;">Employee Card</h3>
+            <button class="drawer-close" onclick="closeDrawer('viewEmployeeDrawer')">&times;</button>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;" id="drawerDetails">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+
+    <!-- Dynamic JavaScript -->
+    <script>
+        // Tab switching logic
+        const tabs = document.querySelectorAll('.nav-menu .nav-item');
+        const contents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                
+                tabs.forEach(t => t.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`tab-${targetTab}`).classList.add('active');
+                
+                // Update page title
+                document.getElementById('pageTitle').innerText = tab.querySelector('span:last-child').innerText;
+                
+                // Update URL parameter
+                history.pushState(null, null, `#${targetTab}`);
+            });
+        });
+
+        // Parse query on load
+        window.addEventListener('load', () => {
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                const activeTab = document.querySelector(`.nav-menu [data-tab="${hash}"]`);
+                if (activeTab) {
+                    activeTab.click();
+                }
+            }
+            updateSystrayStatus();
+        });
+
+        // Modals Management
+        function openModal(id) {
+            document.getElementById(id).classList.add('open');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('open');
+            if (id === 'addEmployeeModal') {
+                // Clear Box & refresh directory
+                document.getElementById('credentialsBox').style.display = 'none';
+                document.getElementById('modalActionButtons').style.display = 'flex';
+                document.getElementById('addEmployeeForm').reset();
+            }
+        }
+
+        // Drawer Management
+        function openDrawer(id) {
+            document.getElementById(id).classList.add('open');
+        }
+        function closeDrawer(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+
+        // Show toast notifications
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('alertsContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert-item ${type}`;
+            alert.innerHTML = `
+                <span>${message}</span>
+                <span style="cursor:pointer; font-weight: 800; margin-left: 1rem;" onclick="this.parentElement.remove()">&times;</span>
+            `;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 4000);
+        }
+
+        // Systray check-in/out
+        function updateSystrayStatus() {
+            fetch('/api/attendance-status')
+                .then(r => r.json())
+                .then(data => {
+                    const dot = document.getElementById('systrayDot');
+                    const label = document.getElementById('systrayLabel');
+                    if (data.checked_in) {
+                        dot.classList.add('active');
+                        if (data.check_out) {
+                            label.innerText = `Checked Out (${data.check_out})`;
+                            dot.classList.remove('active');
+                        } else {
+                            label.innerText = `Checked In (${data.check_in})`;
+                        }
+                    } else {
+                        dot.classList.remove('active');
+                        label.innerText = 'Checked Out';
+                    }
+                });
+        }
+
+        function triggerCheckIn() {
+            fetch('/api/check-in', { method: 'POST' })
+                .then(r => r.json())
+                .then(res => {
+                    showNotification(res.message, res.success ? 'success' : 'danger');
+                    updateSystrayStatus();
+                });
+        }
+
+        function triggerCheckOut() {
+            fetch('/api/check-out', { method: 'POST' })
+                .then(r => r.json())
+                .then(res => {
+                    showNotification(res.message, res.success ? 'success' : 'danger');
+                    updateSystrayStatus();
+                });
+        }
+
+        // Dropdown
+        function toggleDropdown() {
+            document.getElementById('userDropdown').classList.toggle('show');
+        }
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('#userMenu')) {
+                document.getElementById('userDropdown').classList.remove('show');
+            }
+        });
+
+        // Register Employee Form submission
+        function submitOnboardEmployee(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            fetch('/api/employees/add', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    showNotification(res.message);
+                    document.getElementById('generatedCode').innerText = res.employee_code;
+                    document.getElementById('generatedPassword').innerText = res.temp_password;
+                    document.getElementById('credentialsBox').style.display = 'block';
+                    document.getElementById('modalActionButtons').style.display = 'none';
+                } else {
+                    showNotification(res.message, 'danger');
+                }
+            });
+        }
+
+        function copyCredentials() {
+            const code = document.getElementById('generatedCode').innerText;
+            const pass = document.getElementById('generatedPassword').innerText;
+            navigator.clipboard.writeText(`ID: ${code}\nPassword: ${pass}`)
+                .then(() => {
+                    showNotification("Credentials copied to clipboard!");
+                    setTimeout(() => location.reload(), 1500);
+                });
+        }
+
+        // Employee Slideover Drawer Detail Loader
+        function openEmployeeDrawer(emp) {
+            const container = document.getElementById('drawerDetails');
+            
+            // Calculate active status text
+            let statusText = `<span class="badge danger">Absent</span>`;
+            if (emp.today_status === 'PRESENT') statusText = `<span class="badge success">Present today</span>`;
+            else if (emp.today_status === 'HALF_DAY') statusText = `<span class="badge warning">Half Day today</span>`;
+            else if (emp.today_status === 'LEAVE') statusText = `<span class="badge info">On Approved Leave</span>`;
+
+            container.innerHTML = `
+                <div style="text-align: center; border-bottom: 1px solid var(--border-light); padding-bottom: 1.5rem;">
+                    <div style="width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--accent-pink); overflow: hidden; margin: 0 auto 1rem auto; box-shadow: 0 0 15px rgba(255, 0, 127, 0.2);">
+                        ${emp.profile_picture ? `<img src="/uploads/profiles/${emp.profile_picture}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="width:100%; height:100%; background: linear-gradient(135deg, var(--bg-tertiary), var(--accent-pink)); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:2rem; color:#fff;">${emp.first_name[0]}</div>`}
+                    </div>
+                    <h4 style="font-size: 1.3rem; margin-bottom: 0.25rem;">${emp.first_name} ${emp.last_name || ''}</h4>
+                    <div style="font-family: monospace; color: var(--accent-primary); font-weight: 700; margin-bottom: 0.5rem;">${emp.employee_code}</div>
+                    <div>${statusText}</div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <h4 style="font-size: 0.9rem; color: var(--accent-primary); border-bottom: 1px solid var(--border-light); padding-bottom: 0.25rem;">Job Details</h4>
+                    <div class="payslip-row"><span>Designation:</span><strong>${emp.designation || 'Staff'}</strong></div>
+                    <div class="payslip-row"><span>Department:</span><strong>${emp.department || 'General'}</strong></div>
+                    <div class="payslip-row"><span>Joining Date:</span><strong>${emp.joining_date || 'N/A'}</strong></div>
+                    
+                    <h4 style="font-size: 0.9rem; color: var(--accent-secondary); border-bottom: 1px solid var(--border-light); padding-bottom: 0.25rem; margin-top: 0.5rem;">Contact Information</h4>
+                    <div class="payslip-row"><span>Email:</span><strong>${emp.email || 'N/A'}</strong></div>
+                    <div class="payslip-row"><span>Phone:</span><strong>${emp.phone || 'N/A'}</strong></div>
+                    <div class="payslip-row"><span>Address:</span><strong style="max-width:200px; text-align:right;">${emp.address || 'N/A'}</strong></div>
+                    
+                    <h4 style="font-size: 0.9rem; color: var(--accent-green); border-bottom: 1px solid var(--border-light); padding-bottom: 0.25rem; margin-top: 0.5rem;">Salary Profile (Monthly Base)</h4>
+                    <div class="payslip-row"><span>Basic Salary:</span><strong>₹${parseFloat(emp.basic_salary || 0).toLocaleString()}</strong></div>
+                    <div class="payslip-row"><span>Allowances:</span><strong>₹${parseFloat(emp.allowances || 0).toLocaleString()}</strong></div>
+                    <div class="payslip-row"><span>Deductions:</span><strong>₹${parseFloat(emp.deductions || 0).toLocaleString()}</strong></div>
+                    <div class="payslip-row" style="font-weight:700; color:var(--accent-green);"><span>Net Salary:</span><strong>₹${parseFloat(emp.net_salary || 0).toLocaleString()}</strong></div>
+                </div>
+                <button class="btn-accent" style="margin-top: 1.5rem; width: 100%;" onclick="closeDrawer('viewEmployeeDrawer'); openEditEmployeeModalById(${emp.employee_id})">Modify Profile / Salary</button>
+            `;
+            openDrawer('viewEmployeeDrawer');
+        }
+
+        function openEmployeeDrawerById(empId) {
+            const list = JSON.parse(document.getElementById('employees-data').textContent);
+            const emp = list.find(e => e.employee_id == empId);
+            if (emp) openEmployeeDrawer(emp);
+        }
+
+        function openEditEmployeeModalById(empId) {
+            const list = JSON.parse(document.getElementById('employees-data').textContent);
+            const emp = list.find(e => e.employee_id == empId);
+            if (emp) {
+                document.getElementById('editEmpId').value = emp.employee_id;
+                document.getElementById('editFirstName').value = emp.first_name;
+                document.getElementById('editLastName').value = emp.last_name || '';
+                document.getElementById('editPhone').value = emp.phone || '';
+                document.getElementById('editAddress').value = emp.address || '';
+                document.getElementById('editDepartment').value = emp.department || 'Engineering';
+                document.getElementById('editDesignation').value = emp.designation || 'Staff';
+                
+                if (emp.joining_date) {
+                    document.getElementById('editJoining').value = emp.joining_date.split('T')[0];
+                } else {
+                    document.getElementById('editJoining').value = '';
+                }
+                
+                document.getElementById('editBasicSalary').value = emp.basic_salary || 0;
+                document.getElementById('editAllowances').value = emp.allowances || 0;
+                document.getElementById('editDeductions').value = emp.deductions || 0;
+                
+                // Reset file input label
+                document.getElementById('edit-logo-file-name').innerText = "No file selected";
+                document.getElementById('edit_profile_picture').value = "";
+                
+                openModal('editEmployeeModal');
+            }
+        }
+
+        function openHrProfile() {
+            const currentHrEmpId = parseInt(document.body.dataset.userEmployeeId);
+            openEmployeeDrawerById(currentHrEmpId);
+        }
+
+        // Date adjustment for search
+        function adjustSearchDate(offset) {
+            const input = document.getElementById('attendanceFilterDate');
+            const date = new Date(input.value);
+            date.setDate(date.getDate() + offset);
+            input.value = date.toISOString().split('T')[0];
+            filterAttendanceByDate();
+        }
+
+        function filterAttendanceByDate() {
+            const filterVal = document.getElementById('attendanceFilterDate').value;
+            const rows = document.querySelectorAll('.attendance-row');
+            rows.forEach(row => {
+                if (row.dataset.date === filterVal) {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // Run filter initially on date input
+        filterAttendanceByDate();
+
+        // Submit leave review
+        function reviewLeave(id, action) {
+            document.getElementById('reviewLeaveId').value = id;
+            document.getElementById('reviewLeaveStatus').value = action;
+            document.getElementById('leaveReviewTitle').innerText = `${action === 'APPROVED' ? 'Approve' : 'Reject'} Leave Request`;
+            openModal('leaveReviewModal');
+        }
+
+        function submitLeaveReview(event) {
+            event.preventDefault();
+            const id = document.getElementById('reviewLeaveId').value;
+            const formData = new FormData(event.target);
+            fetch(`/leave/review/${id}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    showNotification(res.message);
+                    closeModal('leaveReviewModal');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showNotification(res.message, 'danger');
+                }
+            });
+        }
+
+        function submitEditEmployee(event) {
+            event.preventDefault();
+            const id = document.getElementById('editEmpId').value;
+            const formData = new FormData(event.target);
+            fetch(`/api/employees/edit/${id}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    showNotification(res.message);
+                    closeModal('editEmployeeModal');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showNotification(res.message, 'danger');
+                }
+            });
+        }
+
+        // Update filename when selecting profile picture via paperclip in profile edit
+        window.addEventListener('load', () => {
+            const editLogoInput = document.getElementById('edit_profile_picture');
+            const editLogoLabel = document.getElementById('edit-logo-file-name');
+            if (editLogoInput && editLogoLabel) {
+                editLogoInput.addEventListener('change', function() {
+                    const filename = this.files.length > 0 ? this.files[0].name : "No file selected";
+                    editLogoLabel.innerText = filename;
+                });
+            }
+        });
+
+        // Dynamically fetch and display payslip details
+        function viewPayslip(empId) {
+            fetch(`/api/payslip/${empId}`)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        const content = document.getElementById('payslipContent');
+                        content.innerHTML = `
+                            <div class="payslip-box">
+                                <div class="payslip-header">
+                                    <div>
+                                        <h3 style="font-size:1.8rem; margin:0; color:var(--accent-pink);">${res.employee_name}</h3>
+                                        <span style="font-family:monospace; color:var(--accent-cyan); font-weight:700;">CODE: ${res.employee_code}</span>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <h4 style="margin:0; font-size:1.2rem; color:#fff;">PAYSLIP STATEMENT</h4>
+                                        <span style="color:var(--text-muted); font-size:0.85rem;">MONTH: ${res.month_name}</span>
+                                    </div>
+                                </div>
+
+                                <div class="payslip-grid">
+                                    <div class="payslip-col">
+                                        <h4 style="font-size:0.9rem; color:var(--accent-cyan); border-bottom:1px solid var(--border-light); padding-bottom:0.25rem;">Corporate Details</h4>
+                                        <div class="payslip-row"><span>Designation:</span><strong>${res.designation || 'Staff'}</strong></div>
+                                        <div class="payslip-row"><span>Department:</span><strong>${res.department || 'General'}</strong></div>
+                                        <div class="payslip-row"><span>Total Business Days:</span><strong>${res.total_working_days}</strong></div>
+                                    </div>
+                                    <div class="payslip-col">
+                                        <h4 style="font-size:0.9rem; color:var(--accent-cyan); border-bottom:1px solid var(--border-light); padding-bottom:0.25rem;">Working Diagnostics</h4>
+                                        <div class="payslip-row"><span>Days Present:</span><strong>${res.payable_days}</strong></div>
+                                        <div class="payslip-row"><span>Unpaid Leave Days:</span><strong>${res.unpaid_days}</strong></div>
+                                        <div class="payslip-row"><span>Days Absent:</span><strong>${res.absent_days}</strong></div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top:2rem;">
+                                    <h4 style="font-size:0.9rem; color:var(--accent-pink); border-bottom:1px solid var(--border-light); padding-bottom:0.25rem; margin-bottom:1rem;">Earnings & Deductions</h4>
+                                    
+                                    <div class="payslip-row">
+                                        <span>Monthly Base Salary:</span>
+                                        <strong>₹${res.basic_salary.toLocaleString()}</strong>
+                                    </div>
+                                    <div class="payslip-row" style="background: rgba(255,255,255,0.02); padding: 0.5rem 0.25rem;">
+                                        <span>Pro-Rated Basic (Payable Days):</span>
+                                        <strong>₹${res.pro_rated_basic.toLocaleString()}</strong>
+                                    </div>
+                                    <div class="payslip-row">
+                                        <span>Allowances:</span>
+                                        <strong>+ ₹${res.allowances.toLocaleString()}</strong>
+                                    </div>
+                                    <div class="payslip-row" style="color: #ff6666;">
+                                        <span>Corporate Deductions:</span>
+                                        <strong>- ₹${res.deductions.toLocaleString()}</strong>
+                                    </div>
+
+                                    <div class="payslip-row total">
+                                        <span>Net Payable Salary:</span>
+                                        <span>₹${res.net_salary.toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        openModal('payslipModal');
+                    } else {
+                        showNotification(res.message, 'danger');
+                    }
+                });
+        }
+    </script>
+</body>
+</html>
